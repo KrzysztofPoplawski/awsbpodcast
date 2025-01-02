@@ -1,5 +1,8 @@
-Flask==2.0.1
+flask
+gunicorn
 requests==2.25.1
 beautifulsoup4==4.9.3
-lxml==4.6.3
-gunicorn
+lxml==4.9.3
+pip>=24.3.1
+lxml==4.9.3
+
