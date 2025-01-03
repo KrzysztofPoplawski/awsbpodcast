@@ -3,8 +3,11 @@
 import requests
 import xml.etree.ElementTree as ET
 from flask import Flask, Response
+from email.utils import format_datetime
+from datetime import datetime
 
 app = Flask(__name__)
+
 def gen_pod():
     # URL do istniejącego feedu RSS YouTube
     YOUTUBE_RSS_URL = "https://www.youtube.com/feeds/videos.xml?playlist_id=PLf8XERBV_Iuv4-YfCd7ucWbe44usUikJ6"
@@ -29,9 +32,14 @@ def gen_pod():
     channel = ET.SubElement(rss, "channel")
 
     # Dodaj informacje o kanale
-    ET.SubElement(channel, "title").text = root.find("./atom:title", namespaces).text
-    ET.SubElement(channel, "link").text = root.find("./atom:link", namespaces).attrib["href"]
-    ET.SubElement(channel, "description").text = "Poprawiony RSS z YouTube playlist"
+    title = root.find("./atom:title", namespaces).text
+    link = root.find("./atom:link", namespaces).attrib["href"]
+    description = "Poprawiony RSS z YouTube playlist"
+
+    ET.SubElement(channel, "title").text = title
+    ET.SubElement(channel, "link").text = link
+    ET.SubElement(channel, "description").text = description
+    ET.SubElement(channel, "atom:link", rel="self", href=link, xmlns="http://www.w3.org/2005/Atom")
 
     # Dodaj każdy wpis z XML jako element RSS
     for entry in root.findall("./atom:entry", namespaces):
@@ -39,7 +47,16 @@ def gen_pod():
         ET.SubElement(item, "title").text = entry.find("./atom:title", namespaces).text
         ET.SubElement(item, "link").text = entry.find("./atom:link", namespaces).attrib["href"]
         ET.SubElement(item, "description").text = entry.find("./media:group/media:description", namespaces).text
-        ET.SubElement(item, "pubDate").text = entry.find("./atom:published", namespaces).text
+        
+        # Konwersja daty na RFC-822
+        published = entry.find("./atom:published", namespaces).text
+        pub_date = datetime.strptime(published, "%Y-%m-%dT%H:%M:%S%z")
+        ET.SubElement(item, "pubDate").text = format_datetime(pub_date)
+
+        # Dodaj unikalny identyfikator (guid)
+        video_id = entry.find("./yt:videoId", namespaces).text
+        guid = f"https://www.youtube.com/watch?v={video_id}"
+        ET.SubElement(item, "guid").text = guid
 
     # Zapisz do pliku
     tree = ET.ElementTree(rss)
