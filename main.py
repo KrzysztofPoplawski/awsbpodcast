@@ -2,7 +2,7 @@
 
 import requests
 import xml.etree.ElementTree as ET
-from flask import Flask, Response
+from flask import Flask, Response, send_from_directory
 import os
 import time
 from threading import Thread
@@ -84,7 +84,9 @@ def refresh_rss_in_background():
 
 @app.route("/favicon.ico")
 def favicon():
-    return "", 204  # Pusta odpowiedź, brak zawartości
+    """Serwowanie favicon.ico z katalogu głównego."""
+    return send_from_directory(os.path.dirname(os.path.abspath(__file__)), "favicon.ico", mimetype="image/x-icon")
+
 
 # Domyślna ścieżka, np. strona informacyjna
 @app.route("/rss")
