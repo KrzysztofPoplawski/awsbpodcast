@@ -41,8 +41,8 @@ def gen_pod():
         # Parsuj oryginalny RSS
         root = ET.fromstring(youtube_rss)
 
-        # Utwórz nowy RSS 2.0
-        rss = ET.Element("rss", version="2.0", xmlns="http://www.youtube.com/xml/schemas/2015")
+        # Utwórz nowy RSS 2.0 z przestrzenią nazw atom
+        rss = ET.Element("rss", version="2.0", xmlns="http://www.w3.org/2005/Atom")
         channel = ET.SubElement(rss, "channel")
 
         # Dodaj informacje o kanale
@@ -51,7 +51,7 @@ def gen_pod():
         description = "RSS z YouTube playlist"
 
         ET.SubElement(channel, "title").text = title
-        ET.SubElement(channel, "link").text = "https://awsbpodcast.onrender.com/rss"
+        ET.SubElement(channel, "link").text = link
         ET.SubElement(channel, "description").text = description
 
         # Dodaj element <atom:link> poprawnie deklarując przestrzeń nazw
