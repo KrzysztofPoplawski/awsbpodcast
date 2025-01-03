@@ -3,14 +3,27 @@
 import requests
 import xml.etree.ElementTree as ET
 from flask import Flask, Response
+import os
+import time
+from threading import Thread
 from email.utils import format_datetime
 from datetime import datetime
 
 app = Flask(__name__)
 
+RSS_FILE = "corrected_youtube_rss.xml"
+ONE_DAY_IN_SECONDS = 24 * 60 * 60
+# URL do istniejącego feedu RSS YouTube
+YOUTUBE_RSS_URL = "https://www.youtube.com/feeds/videos.xml?playlist_id=PLf8XERBV_Iuv4-YfCd7ucWbe44usUikJ6"
+
+def is_file_stale(file_path, max_age_in_seconds):
+    """Sprawdź, czy plik jest starszy niż maksymalny wiek."""
+    if not os.path.exists(file_path):
+        return True
+    file_age = time.time() - os.path.getmtime(file_path)
+    return file_age > max_age_in_seconds
+
 def gen_pod():
-    # URL do istniejącego feedu RSS YouTube
-    YOUTUBE_RSS_URL = "https://www.youtube.com/feeds/videos.xml?playlist_id=PLf8XERBV_Iuv4-YfCd7ucWbe44usUikJ6"
 
     # Zdefiniuj przestrzenie nazw
     namespaces = {
@@ -64,6 +77,10 @@ def gen_pod():
 
 #    print("Poprawiony RSS został zapisany w pliku 'corrected_youtube_rss.xml'")
 
+def refresh_rss_in_background():
+    """Uruchom odświeżanie RSS w tle."""
+    thread = Thread(target=gen_pod)
+    thread.start()
 
 @app.route("/favicon.ico")
 def favicon():
