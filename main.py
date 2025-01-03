@@ -98,6 +98,22 @@ def favicon():
     """Serwowanie favicon.ico z katalogu głównego."""
     return send_from_directory(os.path.dirname(os.path.abspath(__file__)), "favicon.ico", mimetype="image/x-icon")
 
+@app.route("/reset", methods=["POST", "GET"])
+def reset_rss():
+    """Resetowanie pliku RSS - usunięcie i wygenerowanie nowego."""
+    try:
+        # Usuń istniejący plik, jeśli istnieje
+        if os.path.exists(RSS_FILE):
+            os.remove(RSS_FILE)
+            print(f"Plik {RSS_FILE} został usunięty.")
+
+        # Wygeneruj nowy plik RSS
+        gen_pod()
+        return "Plik RSS został zresetowany i wygenerowany na nowo.", 200
+    except Exception as e:
+        print(f"Błąd podczas resetowania pliku RSS: {e}")
+        return f"Błąd podczas resetowania pliku RSS: {e}", 500
+
 
 # Domyślna ścieżka, np. strona informacyjna
 @app.route("/rss")
