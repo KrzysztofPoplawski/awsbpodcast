@@ -24,60 +24,67 @@ def is_file_stale(file_path, max_age_in_seconds):
     return file_age > max_age_in_seconds
 
 def gen_pod():
+    """Generowanie nowego pliku RSS."""
+    try:
+        # Zdefiniuj przestrzenie nazw
+        namespaces = {
+            'yt': 'http://www.youtube.com/xml/schemas/2015',
+            'media': 'http://search.yahoo.com/mrss/',
+            'atom': 'http://www.w3.org/2005/Atom'
+        }
 
-    # Zdefiniuj przestrzenie nazw
-    namespaces = {
-        'yt': 'http://www.youtube.com/xml/schemas/2015',
-        'media': 'http://search.yahoo.com/mrss/',
-        'atom': 'http://www.w3.org/2005/Atom'
-    }
+        # Pobierz dane z YouTube RSS
+        response = requests.get(YOUTUBE_RSS_URL)
+        response.raise_for_status()
+        youtube_rss = response.content
 
-    # Pobierz dane z YouTube RSS
-    response = requests.get(YOUTUBE_RSS_URL)
-    response.raise_for_status()
-    youtube_rss = response.content
+        # Parsuj oryginalny RSS
+        root = ET.fromstring(youtube_rss)
 
-    # Parsuj oryginalny RSS
-    root = ET.fromstring(youtube_rss)
+        # Utwórz nowy RSS 2.0
+        rss = ET.Element("rss", version="2.0", xmlns="http://www.youtube.com/xml/schemas/2015")
+        channel = ET.SubElement(rss, "channel")
 
-    # Utwórz nowy RSS 2.0 z przestrzenią nazw `atom`
-    rss = ET.Element("rss", version="2.0", nsmap={"atom": "http://www.w3.org/2005/Atom"})
-    channel = ET.SubElement(rss, "channel")
+        # Dodaj informacje o kanale
+        title = root.find("./atom:title", namespaces).text
+        link = root.find("./atom:link", namespaces).attrib["href"]
+        description = "RSS z YouTube playlist"
 
-    # Dodaj informacje o kanale
-    title = root.find("./atom:title", namespaces).text
-    link = root.find("./atom:link", namespaces).attrib["href"]
-    description = "RSS z YouTube playlist"
+        ET.SubElement(channel, "title").text = title
+        ET.SubElement(channel, "link").text = "https://awsbpodcast.onrender.com/rss"
+        ET.SubElement(channel, "description").text = description
 
-    ET.SubElement(channel, "title").text = title
-    ET.SubElement(channel, "link").text = link
-    ET.SubElement(channel, "description").text = description
-    ET.SubElement(
+        # Dodaj element <atom:link> poprawnie deklarując przestrzeń nazw
+        atom_link = ET.SubElement(
             channel,
-            "{http://www.w3.org/2005/Atom}link",  # Pełna nazwa przestrzeni nazw
-            attrib={"rel": "self", "href": link}
-    )
+            "{http://www.w3.org/2005/Atom}link",
+            attrib={"rel": "self", "href": "https://awsbpodcast.onrender.com/rss"}
+        )
 
-    # Dodaj każdy wpis z XML jako element RSS
-    for entry in root.findall("./atom:entry", namespaces):
-        item = ET.SubElement(channel, "item")
-        ET.SubElement(item, "title").text = entry.find("./atom:title", namespaces).text
-        ET.SubElement(item, "link").text = entry.find("./atom:link", namespaces).attrib["href"]
-        ET.SubElement(item, "description").text = entry.find("./media:group/media:description", namespaces).text
-        
-        # Konwersja daty na RFC-822
-        published = entry.find("./atom:published", namespaces).text
-        pub_date = datetime.strptime(published, "%Y-%m-%dT%H:%M:%S%z")
-        ET.SubElement(item, "pubDate").text = format_datetime(pub_date)
+        # Dodaj każdy wpis z XML jako element RSS
+        for entry in root.findall("./atom:entry", namespaces):
+            item = ET.SubElement(channel, "item")
+            ET.SubElement(item, "title").text = entry.find("./atom:title", namespaces).text
+            ET.SubElement(item, "link").text = entry.find("./atom:link", namespaces).attrib["href"]
+            ET.SubElement(item, "description").text = entry.find("./media:group/media:description", namespaces).text
+            
+            # Konwersja daty na RFC-822
+            published = entry.find("./atom:published", namespaces).text
+            pub_date = datetime.strptime(published, "%Y-%m-%dT%H:%M:%S%z")
+            ET.SubElement(item, "pubDate").text = format_datetime(pub_date)
 
-        # Dodaj unikalny identyfikator (guid)
-        video_id = entry.find("./yt:videoId", namespaces).text
-        guid = f"https://www.youtube.com/watch?v={video_id}"
-        ET.SubElement(item, "guid").text = guid
+            # Dodaj unikalny identyfikator (guid)
+            video_id = entry.find("./yt:videoId", namespaces).text
+            guid = f"https://www.youtube.com/watch?v={video_id}"
+            ET.SubElement(item, "guid").text = guid
 
-    # Zapisz do pliku
-    tree = ET.ElementTree(rss)
-    tree.write("corrected_youtube_rss.xml", encoding="utf-8", xml_declaration=True)
+        # Zapisz do pliku
+        tree = ET.ElementTree(rss)
+        tree.write(RSS_FILE, encoding="utf-8", xml_declaration=True)
+
+    except Exception as e:
+        print(f"Error while generating RSS: {e}")
+
 
 #    print("Poprawiony RSS został zapisany w pliku 'corrected_youtube_rss.xml'")
 
